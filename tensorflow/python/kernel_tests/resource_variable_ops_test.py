@@ -745,7 +745,6 @@ class ResourceVariableOpsTest(test_util.TensorFlowTestCase):
 
   @test_util.run_in_graph_and_eager_modes
   @test_util.run_v1_only("b/120545219")
-  @test_util.disable_xla("This test never passed for XLA")
   def testDestroyResource(self):
     v = resource_variable_ops.ResourceVariable(3.0, name="var0")
     self.evaluate(variables.global_variables_initializer())
@@ -1091,68 +1090,6 @@ class ResourceVariableOpsTest(test_util.TensorFlowTestCase):
       self.evaluate(v.initializer)
       self.evaluate(read.op)
       self.evaluate(gather.op)
-
-
-class _MixedPrecisionVariableTest(test_util.TensorFlowTestCase):
-
-  @test_util.run_in_graph_and_eager_modes()
-  def test_dense_var_to_tensor_read_dtype_same_as_var_dtype(self):
-    # read_dtype is same as dtype
-    v = resource_variable_ops.ResourceVariable(1.0, dtype=dtypes.float32)
-    v = resource_variable_ops._MixedPrecisionVariable(v, dtypes.float32)
-    if not context.executing_eagerly():
-      v.initializer.run()
-
-    # dtype is not read_dtype, return NotImplemented
-    self.assertEqual(
-        NotImplemented, v._dense_var_to_tensor(dtype=dtypes.float16))
-    self.assertEqual(NotImplemented,
-                     v._dense_var_to_tensor(dtype=dtypes.float16, as_ref=True))
-
-    # as_ref is False
-    t = v._dense_var_to_tensor(as_ref=False)
-    self.assertTrue(isinstance(t, ops.Tensor))
-    self.assertEqual(t.dtype, dtypes.float32)
-    self.assertEqual(self.evaluate(t), 1.0)
-
-    t = v._dense_var_to_tensor(dtype=dtypes.float32, as_ref=False)
-    self.assertTrue(isinstance(t, ops.Tensor))
-    self.assertEqual(t.dtype, dtypes.float32)
-    self.assertEqual(self.evaluate(t), 1.0)
-
-    # as_ref is True
-    self.assertEqual(NotImplemented, v._dense_var_to_tensor(as_ref=True))
-    self.assertEqual(NotImplemented,
-                     v._dense_var_to_tensor(dtype=dtypes.float32, as_ref=True))
-
-  @test_util.run_in_graph_and_eager_modes()
-  def test_dense_var_to_tensor_read_dtype_different_from_var_dtype(self):
-    # read_dtype is different from dtype
-    v = resource_variable_ops.ResourceVariable(1.0, dtype=dtypes.float32)
-    v = resource_variable_ops._MixedPrecisionVariable(v, dtypes.float16)
-    if not context.executing_eagerly():
-      v.initializer.run()
-
-    # as_ref is False
-    t = v._dense_var_to_tensor(as_ref=False)
-    self.assertTrue(isinstance(t, ops.Tensor))
-    self.assertEqual(t.dtype, dtypes.float16)
-    self.assertEqual(self.evaluate(t), 1.0)
-
-    t = v._dense_var_to_tensor(dtype=dtypes.float16, as_ref=False)
-    self.assertTrue(isinstance(t, ops.Tensor))
-    self.assertEqual(t.dtype, dtypes.float16)
-    self.assertEqual(self.evaluate(t), 1.0)
-
-    # as_ref is True
-    self.assertEqual(NotImplemented, v._dense_var_to_tensor(as_ref=True))
-    self.assertEqual(NotImplemented,
-                     v._dense_var_to_tensor(dtype=dtypes.float16, as_ref=True))
-
-  @test_util.run_in_graph_and_eager_modes()
-  def testDistributeStrategy(self):
-    v = resource_variable_ops.ResourceVariable(1, dtype=dtypes.int32)
-    self.assertIsNone(v._distribute_strategy)
 
 
 if __name__ == "__main__":
